@@ -13,3 +13,18 @@ Observatorio de la ineficacia normativa: mide la distancia entre lo que la norma
 
 ## Reglas del método
 Cada dato con su fuente y su tipo; solo se cruza lo que tiene llave común (lugar, periodo, tema); las conclusiones se redactan como deberes, no como causas; "alerta de riesgo", nunca "corrupción"; personas naturales ocultas.
+
+## Cómo se construye y se publica
+1. Editá las fuentes en `fuentes/` (la landing, noticias y nosotros se editan directo en `sitio/`).
+2. `python fuentes/construir.py` regenera todas las páginas desde sus fuentes.
+3. `python fuentes/verificar.py` revisa la sintaxis de cada script, los enlaces internos y que no se haya colado ninguna clave.
+4. Subí los cambios a `main`: Vercel publica solo (carpeta raíz `sitio`).
+
+## Motor de fuentes (fx.js)
+- Cada fuente tiene tipo (administrativa, judicial, académica, prensa, audiovisual, testimonial, blog, redes) y solidez.
+- Solo se cruza lo que tiene llave común: lugar, periodo y tema. Una fuente con llave parcial da contexto, no triangula.
+- Independencia: si un medio repite a una entidad ("Procuraduría (vía El Tiempo)"), cuenta como una sola fuente.
+- Las diferencias se nombran por tipo: contradicción, brecha, cobertura, tiempo, subregistro y vacío de información. Solo la contradicción y la brecha se presentan como hallazgo.
+
+## Cruces estadísticos (conclu.js)
+Correlación de Spearman con prueba de permutación (2.000 barajadas, semilla fija), mostrando el número de comunas de cada cruce. Correlación no es causa, y habla de comunas, no de personas.
