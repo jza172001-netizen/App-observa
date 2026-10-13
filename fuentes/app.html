@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mapa · La cadena, comuna por comuna · Observa Rigor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+:root{--bg:#0E0A18;--glass:rgba(22,15,36,.78);--glass2:rgba(34,24,54,.86);--borde:rgba(255,255,255,.1);--txt:#F6F1FF;--suave:#B7AECB;--sol:#FFC93C;--nar:#FF8A3D;--rosa:#FF4F8B;
+ --grad:linear-gradient(115deg,#FFC93C 0%,#FF8A3D 45%,#FF4F8B 100%);color-scheme:dark;
+ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:inherit}html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}body{position:fixed;inset:0;width:100%}
+body{background:var(--bg);color:var(--txt);font-family:'Space Grotesk',system-ui,-apple-system,Segoe UI,sans-serif;-webkit-font-smoothing:antialiased}
+#map{position:absolute;inset:0}
+button{font:inherit;color:inherit}a{color:var(--sol)}button:focus-visible,a:focus-visible{outline:2px solid var(--sol);outline-offset:2px}
+.glass{background:var(--glass);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border:1px solid var(--borde);box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.mono{font-family:'DM Mono',monospace;letter-spacing:.14em;text-transform:uppercase;font-size:.66rem}
+/* barra superior */
+.top{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));left:12px;right:12px;display:flex;align-items:center;gap:10px;z-index:5;pointer-events:none}
+.top>*{pointer-events:auto}
+.marca{display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:999px;text-decoration:none;color:var(--txt);font-weight:700}
+.marca i{width:10px;height:10px;border-radius:50%;background:var(--grad);box-shadow:0 0 14px #FF4F8B}
+.marca small{color:var(--suave);font-weight:400}
+.ctrls{margin-left:auto;display:flex;gap:6px;padding:5px;border-radius:999px}
+.ctrls button{border:0;background:transparent;padding:8px 12px;border-radius:999px;cursor:pointer;font-size:.82rem;white-space:nowrap}
+.ctrls button[aria-pressed="true"]{background:var(--grad);color:#1a0f22;font-weight:700}
+.ctrls button:hover{background:rgba(255,255,255,.08)}
+/* panel lateral */
+.panel{position:absolute;top:calc(70px + env(safe-area-inset-top,0px));left:12px;bottom:150px;width:380px;border-radius:24px;z-index:4;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;gap:4px;padding:8px;border-bottom:1px solid var(--borde)}
+.tabs button{flex:1;border:0;background:transparent;padding:9px 6px;border-radius:12px;cursor:pointer;font-size:.82rem;color:var(--suave)}
+.tabs button[aria-selected="true"]{background:rgba(255,255,255,.1);color:var(--txt);font-weight:700}
+.cuerpo{overflow:auto;padding:14px 16px 18px;flex:1;scrollbar-width:thin}
+.cuerpo h2{font-family:'Fraunces',serif;font-size:1.5rem;margin:0 0 4px;line-height:1.1}
+.cuerpo h3{font-size:1rem;margin:14px 0 6px}
+.sub{color:var(--suave);font-size:.8rem;margin:0 0 10px}
+.grupo{margin-bottom:10px}.grupo .mono{color:var(--sol);margin-bottom:6px;display:block}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--borde);background:rgba(255,255,255,.04);padding:6px 11px;border-radius:999px;cursor:pointer;font-size:.8rem}
+.chips button[aria-pressed="true"]{background:var(--grad);color:#1a0f22;border-color:transparent;font-weight:700}
+.rampa{height:8px;border-radius:4px;margin:10px 0 4px;background:linear-gradient(90deg,#3b2a5c,#FFC93C,#FF8A3D,#FF4F8B)}
+.ext{display:flex;justify-content:space-between;font-size:.74rem;color:var(--suave)}
+.que{font-size:.82rem;color:var(--suave);margin:6px 0 0}
+.fte{font-size:.7rem;color:var(--suave);margin:8px 0 0}.fte a{color:var(--sol)}
+.lugarbox{margin-top:14px;padding-top:14px;border-top:1px solid var(--borde)}
+.cifras{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cifra{background:rgba(255,255,255,.05);border:1px solid var(--borde);border-radius:14px;padding:10px}
+.cifra b{display:block;font-size:1.25rem;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cifra small{color:var(--suave);font-size:.72rem;line-height:1.25;display:block}
+.simple{margin:12px 0 0;padding:0 0 0 16px;font-size:.84rem}.simple li{margin:4px 0}
+/* hallazgos */
+.hall{border:1px solid var(--borde);border-radius:18px;padding:14px;margin-bottom:10px;background:rgba(255,255,255,.03)}
+.hall .n{font-family:'Fraunces',serif;font-weight:900;font-size:2rem;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hall h4{margin:6px 0 4px;font-size:1rem}.hall p{margin:0;color:var(--suave);font-size:.84rem}
+.ir{margin-top:10px;border:0;padding:8px 14px;border-radius:999px;background:var(--grad);color:#1a0f22;font-weight:700;cursor:pointer;font-size:.8rem}
+.mini{margin-top:10px}.mini .b{display:grid;grid-template-columns:1fr 80px 46px;gap:6px;align-items:center;font-size:.72rem;margin:3px 0}
+.mini .t{height:6px;border-radius:3px;background:rgba(255,255,255,.08);display:block;overflow:hidden}.mini .t i{display:block;height:100%;background:var(--grad);border-radius:3px}
+.mini .v{text-align:right;font-variant-numeric:tabular-nums}.mini .nota{display:none}
+.mini h3,.mini .sub,.mini .conclu,.mini .fte{display:none}
+/* ranking */
+.rk{width:100%;display:grid;grid-template-columns:20px 1fr 70px 54px;gap:6px;align-items:center;border:0;background:transparent;padding:5px 4px;border-radius:8px;cursor:pointer;font-size:.8rem;text-align:left}
+.rk:hover,.rk.yo{background:rgba(255,255,255,.07)}.rk em{font-style:normal;color:var(--suave);font-size:.7rem}
+.rk .t{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}.rk .t i{display:block;height:100%;background:var(--grad)}.rk .v{text-align:right}
+/* tira de lugares */
+.tira{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:10px;overflow-x:auto;padding:4px 2px 6px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.tira::-webkit-scrollbar{display:none}
+.lc{flex:0 0 200px;height:120px;border-radius:18px;overflow:hidden;position:relative;cursor:pointer;scroll-snap-align:start;border:1px solid var(--borde);background:#221836;padding:0;text-align:left;transition:transform .25s}
+.lc:hover{transform:translateY(-4px)}.lc img{width:100%;height:100%;object-fit:cover;display:block}
+.lc span{position:absolute;inset:auto 0 0 0;padding:20px 10px 8px;font-size:.82rem;font-weight:700;background:linear-gradient(transparent,rgba(10,6,18,.9))}
+.lc.sinfoto{display:flex;align-items:flex-end;background:linear-gradient(135deg,#2a1d45,#4a2440)}
+/* cajón de lugar */
+.cajon{position:absolute;top:calc(70px + env(safe-area-inset-top,0px));right:12px;width:360px;max-height:calc(100% - 230px);border-radius:24px;z-index:6;overflow:auto;transform:translateX(120%);transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.cajon:not(.on){visibility:hidden;transition:transform .45s cubic-bezier(.2,.8,.2,1),visibility 0s .45s}.cajon.on{transform:none}
+.cajon img{width:100%;height:210px;object-fit:cover;display:block}
+.cajon .in{padding:14px 16px 16px}.cajon h2{font-family:'Fraunces',serif;font-size:1.5rem;margin:0 0 6px}
+.cajon p{margin:0 0 6px;font-size:.88rem;color:#E6DEF5}
+.cajon .x{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(10,6,18,.7);cursor:pointer;font-size:1.1rem}
+.acc{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.acc button,.acc a{border:1px solid var(--borde);background:rgba(255,255,255,.05);padding:7px 12px;border-radius:999px;cursor:pointer;font-size:.78rem;text-decoration:none;color:var(--txt)}
+.cred{font-size:.62rem;color:var(--suave);padding:6px 16px 0}.cred a{color:var(--suave)}
+/* marcadores */
+.pin{display:flex;flex-direction:column;align-items:center;cursor:pointer;transform-origin:bottom center;transition:transform .2s}
+.pin:hover{transform:scale(1.08)}
+.pin .ph{width:46px;height:46px;border-radius:50%;border:3px solid #fff;background:#2a1d45 center/cover;box-shadow:0 0 0 3px rgba(255,79,139,.6),0 8px 20px rgba(0,0,0,.5)}
+.pin .dot{width:14px;height:14px;border-radius:50%;background:var(--grad);border:2px solid #fff;box-shadow:0 0 16px #FF4F8B}
+.pin b{margin-top:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(14,10,24,.82);white-space:nowrap;border:1px solid var(--borde)}
+.pin:after{content:'';width:2px;height:10px;background:linear-gradient(#fff,transparent)}
+.lejos .pin.r2 b,.lejos .pin.r3 b,.muylejos .pin.r3{display:none}
+.lejos .pin.r2 .ph,.lejos .pin.r3 .ph{width:30px;height:30px}
+/* intro */
+.intro{position:absolute;inset:0;z-index:20;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,rgba(255,79,139,.25),transparent 60%),var(--bg);transition:opacity .8s}
+.intro.fuera{opacity:0;pointer-events:none}
+.intro h1{font-family:'Fraunces',serif;font-size:clamp(2.4rem,7vw,5rem);margin:0;text-align:center;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.intro p{text-align:center;color:var(--suave);margin:10px 0 0}
+.barra{width:180px;height:3px;border-radius:2px;background:rgba(255,255,255,.1);margin:22px auto 0;overflow:hidden}.barra i{display:block;height:100%;width:40%;background:var(--grad);animation:carga 1.2s infinite ease-in-out}
+@keyframes carga{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+.busca{position:relative;flex:0 1 360px}.busca input{width:100%;border:1px solid var(--borde);background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);color:var(--txt);padding:11px 16px 11px 40px;border-radius:999px;font:inherit;font-size:.9rem;outline:none}
+.busca input:focus{border-color:var(--sol);box-shadow:0 0 0 3px rgba(255,201,60,.18)}.busca:before{content:'⌕';position:absolute;left:15px;top:50%;transform:translateY(-52%);color:var(--suave);font-size:1.1rem}
+.res{position:absolute;top:calc(100% + 6px);left:0;right:0;border-radius:18px;overflow:hidden;max-height:340px;overflow-y:auto;display:none}.res.on{display:block}
+.res button{display:flex;width:100%;gap:10px;align-items:center;border:0;background:transparent;padding:10px 14px;text-align:left;cursor:pointer;font-size:.86rem}.res button:hover,.res button.act{background:rgba(255,255,255,.08)}.res small{color:var(--suave);margin-left:auto;font-size:.7rem}
+.fab{position:absolute;right:12px;bottom:150px;z-index:5;display:flex;flex-direction:column;gap:8px}
+.fab button{width:46px;height:46px;border-radius:50%;border:1px solid var(--borde);background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);cursor:pointer;font-size:1.15rem;display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.fab button:hover{background:var(--glass2)}.fab .grande{background:var(--grad);color:#1a0f22;border:0}
+.aqui .acc{margin-top:8px}.aqui .acc a,.aqui .acc button{font-size:.74rem;padding:6px 10px}
+.maplibregl-ctrl-scale{background:rgba(14,10,24,.6);color:var(--suave);border-color:var(--suave)}
+.giro{position:absolute;left:404px;bottom:150px;z-index:5;border-radius:22px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:8px;user-select:none;-webkit-user-select:none}
+.aro{width:96px;height:96px;border-radius:50%;position:relative;touch-action:none;cursor:grab;background:radial-gradient(circle,rgba(255,255,255,.06) 0 58%,transparent 59%),conic-gradient(from 0deg,rgba(255,201,60,.35),rgba(255,79,139,.35),rgba(124,247,255,.3),rgba(255,201,60,.35));box-shadow:inset 0 0 0 1px var(--borde)}
+.aro:active{cursor:grabbing}.aguja{position:absolute;inset:8px;transition:transform .1s linear}.aguja:before{content:'N';position:absolute;top:-2px;left:50%;transform:translateX(-50%);font-size:.7rem;font-weight:800;color:var(--sol)}
+.aguja:after{content:'';position:absolute;top:12px;left:50%;transform:translateX(-50%);border:6px solid transparent;border-bottom:12px solid var(--rosa)}
+.perilla{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:var(--grad);box-shadow:0 4px 14px rgba(0,0,0,.5);pointer-events:none;transition:transform .2s}
+.gbtn{display:flex;gap:4px}.gbtn button{border:1px solid var(--borde);background:rgba(255,255,255,.06);border-radius:999px;padding:5px 9px;font-size:.7rem;cursor:pointer}.ginfo{font-size:.66rem;color:var(--suave)}
+.aviso{position:absolute;left:50%;transform:translateX(-50%);top:calc(74px + env(safe-area-inset-top,0px));z-index:7;padding:8px 16px;border-radius:999px;font-size:.82rem;display:none}
+.maplibregl-popup-content{background:var(--glass2);color:var(--txt);border-radius:12px;font-family:inherit;font-size:.82rem;padding:8px 10px;border:1px solid var(--borde)}.maplibregl-popup-tip{display:none}
+.maplibregl-ctrl-attrib{background:rgba(14,10,24,.6)!important;color:var(--suave)}.maplibregl-ctrl-attrib a{color:var(--suave)!important}
+@media (max-width:820px){.giro{left:10px;bottom:250px;padding:8px}.panel:not(.min)~.giro,.panel:not(.min)~.fab{display:none}.ctrls{max-width:100%;overflow-x:auto;scrollbar-width:none}.ctrls::-webkit-scrollbar{display:none}.aro{width:84px;height:84px}.busca{flex-basis:100%;order:3}.top{flex-wrap:wrap}.fab{bottom:250px}
+ .panel{left:0;right:0;width:auto;top:auto;bottom:0;height:44%;border-radius:24px 24px 0 0;transition:height .35s}
+ .panel.min{height:118px}.tira{bottom:calc(44% + 8px);transition:bottom .35s}.panel.min~.tira{bottom:126px}
+ .cajon{left:8px;right:8px;width:auto;top:auto;bottom:8px;max-height:70%;transform:translateY(120%)}.cajon.on{transform:none}
+ .ctrls button{padding:7px 9px;font-size:.74rem}.marca small{display:none}.lc{flex-basis:150px;height:96px}
+ .asa{display:block!important}}
+.asa{display:none;width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.3);margin:8px auto 0;border:0;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.cajon,.panel,.tira{transition:none}.barra i{animation:none}}
+</style>
+</head>
+<body>
+<div id="map" role="region" aria-label="Mapa 3D de Medellín"></div>
+<div class="intro" id="intro"><div><h1>La cadena</h1><p>Medellín, comuna por comuna · Observa Rigor</p><div class="barra"><i></i></div></div></div>
+<div class="top">
+ <a class="marca glass" href="../"><i></i>Observa Rigor <small>· La cadena, comuna por comuna</small></a><a class="marca glass" href="../contratacion/" style="font-size:.82rem">Contratación →</a>
+ <div class="busca"><input id="q" type="search" placeholder="Buscar comuna, barrio, lugar o estación" autocomplete="off" aria-label="Buscar en el mapa"><div class="res glass" id="res" role="listbox"></div></div>
+ <div class="ctrls glass" role="toolbar" aria-label="Vista">
+  <button id="b-3d" aria-pressed="true">3D</button><button id="b-calle" aria-pressed="false">A pie de calle</button>
+  <button id="b-tour" aria-pressed="false">▶ Recorrido</button><button id="b-tm" aria-pressed="true">Metro</button><button id="b-sat" aria-pressed="true">Satélite</button><button id="b-ed" aria-pressed="true">Edificios</button>
+ </div>
+</div>
+<div class="aviso glass" id="aviso"></div>
+<aside class="panel glass" id="panel">
+ <button class="asa" id="asa" aria-label="Expandir o contraer el panel"></button>
+ <div class="tabs" role="tablist">
+  <button role="tab" aria-selected="true" data-t="explorar">Explorar</button><button role="tab" aria-selected="false" data-t="hallazgos">Hallazgos</button>
+  <button role="tab" aria-selected="false" data-t="ranking">Ranking</button><button role="tab" aria-selected="false" data-t="voces">Voces</button>
+ </div>
+ <div class="cuerpo" id="v-explorar">
+  <div id="chips"></div>
+  <b id="ley-t" style="display:block;font-size:.88rem;margin-top:6px"></b><div class="rampa"></div><div class="ext"><span id="ley-min"></span><span id="ley-max"></span></div>
+  <p class="que" id="ley-q"></p>
+  <div class="lugarbox"><h2 id="lugar-n"></h2><p class="sub" id="lugar-t"></p><div class="cifras" id="cifras"></div><ul class="simple" id="simple"></ul></div>
+ </div>
+ <div class="cuerpo" id="v-hallazgos" hidden></div>
+ <div class="cuerpo" id="v-ranking" hidden><h2 id="rk-t"></h2><p class="sub" id="rk-s"></p><div id="rk"></div><div id="rk-f"></div></div>
+ <div class="cuerpo" id="v-voces" hidden><h2>Voces</h2><p class="sub">Lectura de fuentes, no medición. Cada voz parafraseada, con su enlace.</p><div id="voces"></div></div>
+</aside>
+<div class="giro glass" aria-label="Giroscopio: arrastrá para girar e inclinar"><div class="aro" id="aro" role="slider" aria-label="Girar e inclinar el mapa" tabindex="0"><div class="aguja" id="aguja"></div><div class="perilla" id="perilla"></div></div><span class="ginfo" id="ginfo"></span><div class="gbtn"><button id="g-arriba">Desde arriba</button><button id="g-3d">Vista 3D</button></div></div>
+<div class="fab" aria-label="Controles del mapa"><button id="f-yo" title="Mi ubicación" aria-label="Mi ubicación">◎</button><button id="f-centro" title="Centrar en Medellín" aria-label="Centrar en Medellín">⌂</button><button id="f-norte" title="Apuntar al norte" aria-label="Apuntar al norte">➤</button><button id="f-mas" aria-label="Acercar">＋</button><button id="f-menos" aria-label="Alejar">－</button></div>
+<div class="tira" id="tira" aria-label="Lugares"></div>
+<div class="cajon glass" id="cajon" aria-live="polite"></div>
+<div hidden><div id="g-ts"></div><div id="g-sx"></div><div id="g-rec"></div><div id="g-emb"></div></div>
+
+<script id="base" type="application/json">__BASE__</script>
+<script id="barrios" type="application/json">__BARRIOS__</script>
+<script id="img" type="application/json">__IMG__</script>
+<script id="metro" type="application/json">__METRO__</script>
+<script>
+__REUSE__
+const TOQUE=matchMedia('(hover: none)').matches,CHICO=()=>innerWidth<820,RED=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const OR='Observa Rigor, recorrido 2026';
+const mini=s=>s.replace(/^(wm|fotos)\//,'th/$1_');
+const fotoDe=x=>x.own?{src:'fotos/'+x.own+'.jpg',cred:'Foto: '+OR}:(x.im&&IMG[x.im]?{src:'wm/'+x.im+'.jpg',cred:'Foto: <a href="'+IMG[x.im].page+'" target="_blank" rel="noopener">'+(IMG[x.im].autor||'Wikimedia Commons')+'</a> · '+IMG[x.im].lic}:null);
+let act=0,sel='13',map,lugarAct=null,tourOn=false,tourI=0,tourT=null;
+L.splice(L.findIndex(l=>l.id==='venta_m2'),0,{g:'Plata',id:'venta_tot',t:'Precio de vivienda',d:0,money:1,u:'precio típico de una casa o apartamento en venta, mediana 2020–2022',q:'Lo que cuesta una vivienda típica en la zona, según las ofertas registradas por la Alcaldía. Último dato público: 2022.',fk:'sae',s:['oime']},{g:'Plata',id:'arr_tot',t:'Arriendo mensual',d:0,money:1,u:'arriendo mensual típico de una vivienda, mediana 2020–2022',q:'Lo que se paga al mes por arrendar una casa o apartamento típico en la zona. Último dato público: 2022.',fk:'turismo',s:['oime']});
+// ---------- panel: pestañas ----------
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));['explorar','hallazgos','ranking','voces'].forEach(v=>document.getElementById('v-'+v).hidden=v!==b.dataset.t);if(CHICO())document.getElementById('panel').classList.remove('min')});
+document.getElementById('asa').onclick=()=>document.getElementById('panel').classList.toggle('min');
+// ---------- temas ----------
+const grupos={};const chips=document.getElementById('chips');
+L.forEach((l,i)=>{if(!grupos[l.g]){const d=document.createElement('div');d.className='grupo';d.innerHTML='<span class="mono">'+l.g+'</span><div class="chips"></div>';chips.appendChild(d);grupos[l.g]=d.querySelector('.chips')}
+ const b=document.createElement('button');b.textContent=l.t;b.onclick=()=>tema(i);grupos[l.g].appendChild(b);l.b=b});
+const filas=l=>l.barrio?BR.features.map(f=>({...f.properties,nombre:f.properties.n})):U;
+const rango=l=>filas(l).map(p=>p[l.id]).filter(v=>v!=null).sort((a,b)=>a-b);
+const val=(l,v)=>l.money?peso(v):fmt(v,l.d);
+function color(l){const v=rango(l),q=p=>v[Math.floor(p*(v.length-1))],c=l.inv?['#FF4F8B','#FF8A3D','#FFC93C','#3b2a5c']:['#3b2a5c','#FFC93C','#FF8A3D','#FF4F8B'];
+ return ['case',['==',['get',l.id],null],'#2a2240',['interpolate',['linear'],['get',l.id],q(0),c[0],q(.33),c[1],q(.66),c[2],q(1),c[3]]]}
+function tema(i){act=i;const l=L[i];L.forEach(x=>x.b.setAttribute('aria-pressed',x===l));
+ if(map&&map.getLayer('z')){if(l.barrio){map.setPaintProperty('bf','fill-color',color(l));map.setLayoutProperty('bf','visibility','visible');map.setPaintProperty('z','fill-opacity',.08)}
+  else{map.setLayoutProperty('bf','visibility','none');map.setPaintProperty('z','fill-opacity',document.getElementById('b-sat').getAttribute('aria-pressed')==='true'?.22:.55);map.setPaintProperty('z','fill-color',color(l))}}
+ const S=filas(l),v=rango(l),lo=S.find(p=>p[l.id]===v[0]),hi=S.find(p=>p[l.id]===v[v.length-1]);
+ document.getElementById('ley-t').textContent=l.t+' · '+l.u;document.getElementById('ley-q').innerHTML=l.q+fc(...l.s);
+ document.getElementById('ley-min').textContent=(l.inv?'Mejor ':'Menos ')+val(l,v[0])+' · '+nom(lo.nombre);document.getElementById('ley-max').textContent=(l.inv?'Peor ':'Más ')+val(l,v[v.length-1])+' · '+nom(hi.nombre);
+ ranking()}
+// ---------- comuna elegida ----------
+function lugar(k){sel=k;const p=P(k),m=media,z=P('14');
+ document.getElementById('lugar-n').textContent=(rural(p)?'':'Comuna '+p.k+' · ')+nom(p.nombre);
+ document.getElementById('lugar-t').textContent=(rural(p)?'Corregimiento rural · ':'')+fmt(p.poblacion)+' habitantes aprox.';
+ const C=[[fmt(p.ipm,1)+' %','hogares en pobreza'],[fmt(p.cap376_x1000,1),'capturas por drogas por cada mil hab.'],[peso(p.venta_tot),'vivienda típica en venta'],[peso(p.arr_tot),'arriendo mensual típico'],[peso(p.venta_m2),'m² de vivienda en venta'],[peso(p.inv_pc),'inversión pública por habitante'],[fmt(p.desempleo,1)+' %','desempleo'],[fmt(p.sexual),'capturas por explotación sexual y trata (20 años)']];
+ document.getElementById('cifras').innerHTML=C.map(c=>'<div class="cifra"><b>'+c[0]+'</b><small>'+c[1]+'</small></div>').join('')+'<div style="grid-column:1/-1">'+fc('ecv','cap','oime','inv')+'</div>';
+ const s=[],r=(a,b)=>b?a/b:1,pob=r(p.ipm,m('ipm')),cap=r(p.cap376_x1000,m('cap376_x1000'));
+ s.push(pob>1.2?'Más pobreza que el promedio de Medellín ('+fmt(pob,1)+' veces).':pob<0.8?'Menos pobreza que el promedio de Medellín.':'Pobreza cerca del promedio de la ciudad.');
+ s.push('Capturas por drogas: '+(cap>1.2?fmt(cap,1)+' veces el promedio.':cap<0.8?'menos que el promedio.':'cerca del promedio.'));
+ if(k!=='14'&&p.venta_m2)s.push('El m² de vivienda cuesta el '+fmt(p.venta_m2/z.venta_m2*100,0)+' % de lo que cuesta en El Poblado.');
+ if(k==='13')s.push('Aquí están La Escombrera y La Arenera: 502 personas reportadas como desaparecidas, 7 encontradas.');
+ if(k==='14')s.push('La comuna más rica, señalada por el turismo sexual, con apenas '+fmt(p.sexual)+' capturas por explotación sexual en 20 años.');
+ document.getElementById('simple').innerHTML=s.map(x=>'<li>'+x+'</li>').join('');
+ if(map&&map.getSource('z'))U.forEach(q=>map.setFeatureState({source:'z',id:q.k},{sel:q.k===k}));ranking()}
+function ranking(){const l=L[act].barrio?L[0]:L[act],o=U.filter(p=>p[l.id]!=null).sort((a,b)=>l.inv?a[l.id]-b[l.id]:b[l.id]-a[l.id]),mx=Math.max(...o.map(p=>p[l.id]))||1;
+ document.getElementById('rk-t').textContent=l.t;document.getElementById('rk-s').textContent=l.u+(l.inv?' · de peor a mejor':'');
+ document.getElementById('rk').innerHTML=o.map((p,i)=>'<button class="rk'+(p.k===sel?' yo':'')+'" onclick="irComuna(\''+p.k+'\')"><em>'+(i+1)+'</em><span>'+nom(p.nombre)+'</span><span class="t"><i style="width:'+Math.max(2,p[l.id]/mx*100)+'%"></i></span><span class="v">'+val(l,p[l.id])+'</span></button>').join('');
+ document.getElementById('rk-f').innerHTML=fc(...l.s)}
+// ---------- hallazgos que mueven la cámara ----------
+const HALL=[
+ {n:'0,1 %',t:'La ley de drogas cae abajo',p:'Casi la mitad de las capturas de 20 años fueron por drogas y casi ninguna de un universitario. Se concentran en el Centro y los barrios populares.',tema:'cap376_x1000',cam:{center:[-75.566,6.252],zoom:13.4,pitch:62,bearing:-30},mini:'g-quien-mini'},
+ {n:'1 vs 73',t:'Turismo sexual sin castigo',p:'Una captura por turismo sexual en 20 años, contra 73 extranjeros rechazados en el aeropuerto solo en 2026.',tema:'sexual',lugar:'Provenza y Parque Lleras',mini:'g-ts'},
+ {n:'5×',t:'La plata pública sí llega',p:'La Alcaldía invierte unas cinco veces más por habitante en Popular que en El Poblado. El Estado está con plata y con policía a la vez.',tema:'inv_pc',cam:{center:[-75.553,6.285],zoom:13.2,pitch:60,bearing:20}},
+ {n:'502 → 7',t:'Memoria: la Comuna 13',p:'Reportados como desaparecidos frente a encontrados. La Escombrera y La Arenera siguen bajo protección de la JEP.',tema:'ipm',lugar:'Escaleras de la Comuna 13',mini:'g-emb'},
+ {n:'43',t:'Reclutamiento sin registro',p:'Capturas por usar menores para delinquir en 20 años, mientras las organizaciones hablan de miles de niños en riesgo.',tema:'recluta',cam:{center:[-75.59,6.25],zoom:12.2,pitch:55,bearing:0},mini:'g-rec'},
+ {n:'×5,6',t:'Cuánto vale vivir en cada comuna',p:'Con lo que cuesta un m² de vivienda en El Poblado se compran más de cinco en Popular.',tema:'venta_m2',cam:{center:[-75.575,6.215],zoom:12.6,pitch:60,bearing:-40}}];
+function pintarHall(){const quien='<h3></h3><div class="b"><span>Oficios varios o desempleado</span><span class="t"><i style="width:55.5%"></i></span><span class="v">55,5 %</span></div><div class="b"><span>Primaria o menos</span><span class="t"><i style="width:38.9%"></i></span><span class="v">38,9 %</span></div><div class="b"><span>Universitario</span><span class="t"><i style="width:1%"></i></span><span class="v">0,1 %</span></div>';
+ document.getElementById('v-hallazgos').innerHTML='<h2>Seis hallazgos</h2><p class="sub">Tocá "Ver en el mapa" y la cámara te lleva.</p>'+HALL.map((h,i)=>'<div class="hall"><div class="n">'+h.n+'</div><h4>'+h.t+'</h4><p>'+h.p+'</p><div class="mini">'+(h.mini==='g-quien-mini'?quien:(h.mini?document.getElementById(h.mini).innerHTML:''))+'</div><button class="ir" onclick="verHall('+i+')">Ver en el mapa →</button></div>').join('')}
+function verHall(i){const h=HALL[i],ti=L.findIndex(l=>l.id===h.tema);if(ti>=0)tema(ti);parar();
+ if(h.lugar){const x=PL.find(p=>p.n===h.lugar);if(x)abrirLugar(x)}else{cerrarCajon();vuela(h.cam)}if(CHICO())document.getElementById('panel').classList.add('min')}
+// ---------- cámara ----------
+function vuela(c,ms){map.flyTo({...c,duration:RED?0:(ms||1700),essential:true,curve:1.4})}
+function irComuna(k){lugar(k);const f=B.features.find(f=>f.properties.k===k);vuela({center:centro(f.geometry),zoom:rural(f.properties)?12.2:13.6,pitch:58,bearing:map.getBearing()})}
+let orbitaId=null;function orbita(){if(RED)return;cancelAnimationFrame(orbitaId);const t0=performance.now(),b0=map.getBearing();const paso=t=>{if(!orbitaId)return;map.setBearing(b0+(t-t0)/1000*6);orbitaId=requestAnimationFrame(paso)};orbitaId=requestAnimationFrame(paso)}
+function sinOrbita(){cancelAnimationFrame(orbitaId);orbitaId=null}
+// ---------- lugares ----------
+function abrirLugar(x,deTour){lugarAct=x;if(x.k)lugar(x.k);const f=fotoDe(x);sinOrbita();
+ document.getElementById('cajon').innerHTML='<button class="x" aria-label="Cerrar" onclick="cerrarCajon()">×</button>'+(f?'<img src="'+f.src+'" alt="'+x.n+'"><div class="cred">'+f.cred+'</div>':'')+'<div class="in"><span class="mono" style="color:var(--sol)">'+(x.k?(rural(P(x.k))?'Zona rural':'Comuna '+x.k+' · '+nom(P(x.k).nombre)):'Fuera de Medellín')+'</span><h2>'+x.n+'</h2><p>'+x.h()+'</p>'+(x.s&&x.s.length?fc(...x.s):'')+
+ botonesG(x.ll[0],x.ll[1])+'<div class="acc"><button onclick="orbita()">Girar alrededor</button>'+(deTour?'':'<button onclick="sigLugar()">Siguiente →</button>')+'</div></div>';
+ document.getElementById('cajon').classList.add('on');
+ vuela({center:x.ll,zoom:x.k?15.1:13.4,pitch:56,bearing:map.getBearing()},2000)}
+const SV=(lat,lng)=>'https://www.google.com/maps/@?api=1&map_action=pano&viewpoint='+lat+','+lng;
+const GE=(lat,lng)=>'https://earth.google.com/web/@'+lat+','+lng+',1600a,1200d,35y,0h,65t,0r';
+const GM=(lat,lng)=>'https://www.google.com/maps/search/?api=1&query='+lat+','+lng;
+function pararme(lng,lat){sinOrbita();map.easeTo({center:[lng,lat],zoom:17.3,pitch:78,duration:RED?0:1600});document.getElementById('b-calle').setAttribute('aria-pressed','true')}
+const botonesG=(lng,lat)=>'<div class="acc"><button onclick="pararme('+lng+','+lat+')">Pararme aquí</button><a href="'+SV(lat,lng)+'" target="_blank" rel="noopener">Street View</a><a href="'+GE(lat,lng)+'" target="_blank" rel="noopener">Google Earth</a><a href="'+GM(lat,lng)+'" target="_blank" rel="noopener">Google Maps</a></div>';
+function cerrarCajon(){document.getElementById('cajon').classList.remove('on');sinOrbita()}
+function sigLugar(){const con=PL.filter(p=>fotoDe(p));const i=con.indexOf(lugarAct);abrirLugar(con[(i+1)%con.length])}
+function calle(){sinOrbita();const c=map.getCenter();map.easeTo({center:c,zoom:16.6,pitch:80,duration:RED?0:2200});document.getElementById('b-calle').setAttribute('aria-pressed','true')}
+// ---------- recorrido cinematográfico ----------
+function parar(){tourOn=false;clearTimeout(tourT);document.getElementById('b-tour').setAttribute('aria-pressed','false');document.getElementById('b-tour').textContent='▶ Recorrido'}
+function tour(){const con=PL.filter(p=>fotoDe(p));if(tourI>=con.length)tourI=0;abrirLugar(con[tourI],true);tourI++;tourT=setTimeout(()=>{if(tourOn)tour()},7500)}
+document.getElementById('b-tour').onclick=function(){if(tourOn){parar();return}tourOn=true;this.setAttribute('aria-pressed','true');this.textContent='❚❚ Pausar';tour()};
+document.getElementById('b-calle').onclick=function(){if(this.getAttribute('aria-pressed')==='true'){this.setAttribute('aria-pressed','false');map.easeTo({pitch:55,zoom:Math.min(map.getZoom(),14),duration:1500})}else calle()};
+document.getElementById('b-3d').onclick=function(){const on=this.getAttribute('aria-pressed')!=='true';this.setAttribute('aria-pressed',on);map.setTerrain(on?{source:'dem',exaggeration:1.5}:null);map.easeTo({pitch:on?60:0,bearing:on?-20:0,duration:1500})};
+const capa=(btn,ids)=>{document.getElementById(btn).onclick=function(){const on=this.getAttribute('aria-pressed')!=='true';this.setAttribute('aria-pressed',on);ids.forEach(l=>map.getLayer(l)&&map.setLayoutProperty(l,'visibility',on?'visible':'none'))}};
+capa('b-tm',['tml','tmc','tme']);
+document.getElementById('b-sat').onclick=function(){const on=this.getAttribute('aria-pressed')!=='true';this.setAttribute('aria-pressed',on);map.setLayoutProperty('sat','visibility',on?'visible':'none');map.setPaintProperty('relieve','hillshade-exaggeration',on?.15:.55);map.setPaintProperty('z','fill-opacity',L[act].barrio?.08:(on?.22:.55));map.setPaintProperty('bf','fill-opacity',on?.35:.6);if(on&&map.getZoom()<13)vuela({zoom:14,pitch:60,bearing:map.getBearing(),center:map.getCenter()})};capa('b-ed',['ed3d']);
+// ---------- tira de lugares ----------
+document.getElementById('tira').innerHTML=PL.map((x,i)=>[x,i]).sort((a,b)=>(fotoDe(b[0])?1:0)-(fotoDe(a[0])?1:0)).map(([x,i])=>{const f=fotoDe(x);return '<button class="lc'+(f?'':' sinfoto')+'" onclick="parar();abrirLugar(PL['+i+'])">'+(f?'<img src="'+mini(f.src)+'" alt="" loading="lazy">':'')+'<span>'+x.n+'</span></button>'}).join('');
+document.getElementById('voces').innerHTML=VOZ.map(v=>'<div class="hall"><span class="mono" style="color:var(--sol)">'+v[1]+'</span><h4>'+v[0]+'</h4><p>'+v[2]+'</p>'+fc(v[3])+'</div>').join('');
+SRC.tm=['Transporte masivo (Alcaldía)','https://www.medellin.gov.co/servidormapas/rest/services/transporte/VC_Infraest_Gestion_Transporte/MapServer'];CORTA.tm='Transporte masivo';
+// ---------- mapa ----------
+map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/dark',pixelRatio:Math.min(devicePixelRatio||1,CHICO()?1.5:1.75),fadeDuration:0,maxTileCacheZoomLevels:3,center:[-75.585,6.24],zoom:10.6,pitch:0,bearing:0,maxPitch:85,attributionControl:{compact:true}});
+map.addControl(new maplibregl.ScaleControl({unit:'metric'}),'bottom-right');
+const geo=new maplibregl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:true,showUserHeading:true});map.addControl(geo,'top-right');document.querySelector('.maplibregl-ctrl-top-right').style.display='none';
+document.getElementById('f-yo').onclick=()=>geo.trigger();document.getElementById('f-centro').onclick=()=>{parar();cerrarCajon();vuela({center:[-75.585,6.235],zoom:11.7,pitch:58,bearing:-20})};
+document.getElementById('f-norte').onclick=()=>map.easeTo({bearing:0,duration:600});document.getElementById('f-mas').onclick=()=>map.zoomIn({duration:300});document.getElementById('f-menos').onclick=()=>map.zoomOut({duration:300});
+map.on('rotate',()=>document.getElementById('f-norte').style.transform='rotate('+(-90-map.getBearing())+'deg)');document.getElementById('f-norte').style.transform='rotate(-90deg)';
+const pop=new maplibregl.Popup({closeButton:false,closeOnClick:false,offset:8});
+map.on('style.load',()=>{
+ const primero=(map.getStyle().layers.find(l=>l.type==='symbol')||{}).id;
+ map.getStyle().layers.forEach(l=>{if(/poi|housenumber/.test(l.id))map.setLayoutProperty(l.id,'visibility','none')});
+ const DEM='https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+ map.addSource('dem',{type:'raster-dem',tiles:[DEM],encoding:'terrarium',tileSize:256,maxzoom:13});
+ map.addSource('dem2',{type:'raster-dem',tiles:[DEM],encoding:'terrarium',tileSize:256,maxzoom:13});
+ map.addSource('sat',{type:'raster',tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],tileSize:256,maxzoom:19,attribution:'Imagen satelital: Esri, Maxar, Earthstar Geographics'});
+ map.addLayer({id:'sat',type:'raster',source:'sat',layout:{visibility:'visible'},paint:{'raster-saturation':-.1,'raster-contrast':.08}},primero);
+ map.addLayer({id:'relieve',type:'hillshade',source:'dem2',paint:{'hillshade-exaggeration':.15,'hillshade-shadow-color':'#05030a','hillshade-highlight-color':'rgba(255,201,60,.18)','hillshade-accent-color':'#1a1030'}},primero);
+ map.setTerrain({source:'dem',exaggeration:1.4});
+ map.setSky({'sky-color':'#120b22','horizon-color':'#ff8a3d','fog-color':'#24143a','sky-horizon-blend':.5,'horizon-fog-blend':.7,'fog-ground-blend':.35,'atmosphere-blend':['interpolate',['linear'],['zoom'],0,1,12,.4]});
+ map.addSource('z',{type:'geojson',data:B,promoteId:'k'});map.addSource('b',{type:'geojson',data:BR});
+ map.addLayer({id:'z',type:'fill',source:'z',paint:{'fill-opacity':.22,'fill-color':'#3b2a5c'}},primero);
+ map.addLayer({id:'bf',type:'fill',source:'b',layout:{visibility:'none'},paint:{'fill-opacity':.35,'fill-color':'#3b2a5c'}},primero);
+ map.addLayer({id:'bl',type:'line',source:'b',paint:{'line-color':'#ffffff','line-opacity':['interpolate',['linear'],['zoom'],11,.05,14,.35],'line-width':.6}},primero);
+ map.addLayer({id:'zl',type:'line',source:'z',paint:{'line-color':['case',['boolean',['feature-state','sel'],false],'#FFC93C','rgba(255,255,255,.55)'],'line-width':['case',['boolean',['feature-state','sel'],false],3.5,1.2],'line-blur':['case',['boolean',['feature-state','sel'],false],1.5,0]}},primero);
+ map.addLayer({id:'ed3d',type:'fill-extrusion',source:'openmaptiles','source-layer':'building',minzoom:14,layout:{visibility:'visible'},paint:{'fill-extrusion-color':['interpolate',['linear'],['coalesce',['get','render_height'],6],0,'#2b2145',40,'#5b3a7a',120,'#FF8A3D'],'fill-extrusion-height':['coalesce',['get','render_height'],6],'fill-extrusion-base':['coalesce',['get','render_min_height'],0],'fill-extrusion-opacity':.85}});
+ map.addSource('tml',{type:'geojson',data:TM.lin});map.addSource('tme',{type:'geojson',data:TM.est});
+ const tc=['match',['get','t'],'Metro','#7CF7FF','Metrocable','#FF4F8B','Tranvía','#FF8A3D','Metroplús','#FFC93C','#888'];
+ map.addLayer({id:'tml',type:'line',source:'tml',filter:['!=',['get','t'],'Metrocable'],paint:{'line-color':tc,'line-width':['match',['get','t'],'Metro',4,2.5],'line-blur':.6}});
+ map.addLayer({id:'tmc',type:'line',source:'tml',filter:['==',['get','t'],'Metrocable'],paint:{'line-color':'#FF4F8B','line-width':3,'line-dasharray':[1.2,.8]}});
+ map.addLayer({id:'tme',type:'circle',source:'tme',paint:{'circle-radius':['interpolate',['linear'],['zoom'],11,2.5,16,7],'circle-color':'#0E0A18','circle-stroke-color':tc,'circle-stroke-width':2.2}});
+ const CEN={type:'FeatureCollection',features:B.features.map(f=>({type:'Feature',properties:{n:(CORTO[f.properties.nombre]||nom(f.properties.nombre)),c:rural(f.properties)?'Zona rural':'Comuna '+f.properties.k},geometry:{type:'Point',coordinates:centro(f.geometry)}}))};
+ map.addSource('cen',{type:'geojson',data:CEN});
+ map.addLayer({id:'nombres',type:'symbol',source:'cen',layout:{'text-field':['format',['upcase',['get','n']],{'font-scale':1},'\n',{},['get','c'],{'font-scale':.7}],'text-font':['Noto Sans Bold'],'text-size':['interpolate',['linear'],['zoom'],10,10,13,15,15,20],'text-letter-spacing':.08,'text-max-width':9,'text-allow-overlap':false},paint:{'text-color':'#ffffff','text-halo-color':'rgba(14,10,24,.9)','text-halo-width':1.6,'text-opacity':['interpolate',['linear'],['zoom'],10,.85,15.5,.9,16.5,0]}});
+ map.addLayer({id:'est-nom',type:'symbol',source:'tme',minzoom:14,layout:{'text-field':['get','n'],'text-font':['Noto Sans Regular'],'text-size':11,'text-offset':[0,1.2],'text-anchor':'top'},paint:{'text-color':'#d9d2ea','text-halo-color':'#0E0A18','text-halo-width':1.2}});
+ PL.forEach(x=>{if(!x.ll){const f=BX(x.b);x.ll=f?centro(f.geometry):[-75.566,6.257]}const f=fotoDe(x),e=document.createElement('div');e.className='pin r'+(x.r||2);
+  e.innerHTML=(f?'<div class="ph" style="background-image:url(\''+mini(f.src)+'\')"></div>':'<div class="dot"></div>')+'<b>'+x.n+'</b>';e.onclick=ev=>{ev.stopPropagation();parar();abrirLugar(x)};
+  new maplibregl.Marker({element:e,anchor:'bottom'}).setLngLat(x.ll).addTo(map)});
+ tema(act);lugar(sel);pintarHall();
+ const sinT=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const IDX=[...U.map(p=>({n:(rural(p)?'':'Comuna '+p.k+' · ')+nom(p.nombre),t:rural(p)?'Corregimiento':'Comuna',go:()=>irComuna(p.k)})),
+  ...PL.map(x=>({n:x.n,t:'Lugar',go:()=>{parar();abrirLugar(x)}})),
+  ...BR.features.map(f=>({n:f.properties.n,t:'Barrio · comuna '+f.properties.c,go:()=>{const c=centro(f.geometry);lugar(f.properties.c);vuela({center:c,zoom:15.4,pitch:60,bearing:map.getBearing()});setTimeout(()=>map.fire('click',{lngLat:new maplibregl.LngLat(c[0],c[1]),point:map.project(c)}),1800)}})),
+  ...TM.est.features.map(f=>({n:'Estación '+f.properties.n,t:f.properties.t+' · '+f.properties.l,go:()=>vuela({center:f.geometry.coordinates,zoom:16,pitch:62,bearing:map.getBearing()})}))].map(o=>({...o,k:sinT(o.n)}));
+ const q=document.getElementById('q'),res=document.getElementById('res');let hits=[],ai=0;
+ const pinta=()=>{res.innerHTML=hits.map((h,i)=>'<button role="option" class="'+(i===ai?'act':'')+'" data-i="'+i+'">'+h.n+'<small>'+h.t+'</small></button>').join('');res.classList.toggle('on',hits.length>0);res.querySelectorAll('button').forEach(b=>b.onclick=()=>elige(+b.dataset.i))};
+ const elige=i=>{const h=hits[i];if(!h)return;q.value=h.n;res.classList.remove('on');q.blur();h.go()};
+ q.oninput=()=>{const s=sinT(q.value.trim());ai=0;hits=s.length<2?[]:IDX.filter(o=>o.k.includes(s)).sort((a,b)=>a.k.indexOf(s)-b.k.indexOf(s)).slice(0,8);pinta()};
+ q.onkeydown=e=>{if(e.key==='ArrowDown'){ai=Math.min(ai+1,hits.length-1);pinta();e.preventDefault()}else if(e.key==='ArrowUp'){ai=Math.max(ai-1,0);pinta();e.preventDefault()}else if(e.key==='Enter')elige(ai);else if(e.key==='Escape')res.classList.remove('on')};
+ document.addEventListener('click',e=>{if(!e.target.closest('.busca'))res.classList.remove('on')});
+ const zcls=()=>{const z=map.getZoom(),c=document.getElementById('map').classList;c.toggle('lejos',z<12.6);c.toggle('muylejos',z<11.6)};map.on('zoom',zcls);zcls();
+ setTimeout(()=>{document.getElementById('intro').classList.add('fuera');vuela({center:[-75.585,6.235],zoom:11.7,pitch:58,bearing:-20},RED?0:2800)},500);
+ if(CHICO())document.getElementById('panel').classList.add('min');
+});
+map.setMaxBounds([[-75.78,6.08],[-75.42,6.42]]);map.setMinZoom(10);
+map.on('mousemove','z',e=>{if(TOQUE)return;const p=e.features[0].properties,l=L[act],br=barrioEn(e.lngLat);map.getCanvas().style.cursor='pointer';
+ pop.setLngLat(e.lngLat).setHTML((br?'<b>Barrio '+br.n+'</b><br>':'')+(rural(p)?'':'Comuna '+p.k+' · ')+nom(p.nombre)+'<br>'+(l.barrio&&br?'Capturas por drogas: <b>'+fmt(br.cap)+'</b>':l.t+': <b>'+val(l,p[l.id])+'</b>')).addTo(map)});
+map.on('mouseleave','z',()=>{map.getCanvas().style.cursor='';pop.remove()});
+map.on('click',e=>{const st=map.queryRenderedFeatures(e.point,{layers:['tme']});if(st.length){const p=st[0].properties;new maplibregl.Popup({offset:8}).setLngLat(e.lngLat).setHTML('<b>Estación '+p.n+'</b><br>'+p.t+' · '+p.l+fc('tm')).addTo(map);return}
+ const z=map.queryRenderedFeatures(e.point,{layers:['z']});if(!z.length)return;const br=barrioEn(e.lngLat);lugar(z[0].properties.k);
+ if(br)new maplibregl.Popup({offset:8,maxWidth:'260px'}).setLngLat(e.lngLat).setHTML('<b>Barrio '+br.n+'</b><br>Comuna '+br.c+'<br>Capturas por drogas 2019–2023: <b>'+fmt(br.cap)+'</b><br>Habitantes aprox.: '+fmt(br.pob)+(br.vt?'<br>Vivienda típica: <b>'+peso(br.vt)+'</b>':'')+(br.at?'<br>Arriendo mensual: <b>'+peso(br.at)+'</b>':'')+(br.v?'<br>m² de vivienda: '+peso(br.v):'')+fc('cap','cat','oime')+botonesG(e.lngLat.lng.toFixed(5),e.lngLat.lat.toFixed(5))).addTo(map);
+ if(CHICO())document.getElementById('panel').classList.remove('min')});
+function queHay(ll){const br=barrioEn(ll),z=map.queryRenderedFeatures(map.project(ll),{layers:['z']})[0],p=z&&z.properties;new maplibregl.Popup({offset:8,maxWidth:'280px',className:'aqui'}).setLngLat(ll).setHTML('<b>¿Qué hay aquí?</b><br>'+(br?'Barrio '+br.n+' · ':'')+(p?(rural(p)?nom(p.nombre):'Comuna '+p.k+' · '+nom(p.nombre)):'Fuera de Medellín')+'<br><span style="color:var(--suave);font-size:.72rem">'+ll.lat.toFixed(5)+', '+ll.lng.toFixed(5)+'</span>'+botonesG(ll.lng.toFixed(5),ll.lat.toFixed(5))).addTo(map)}
+map.on('contextmenu',e=>queHay(e.lngLat));let lp=null;map.on('touchstart',e=>{if(e.originalEvent.touches.length>1)return;lp=setTimeout(()=>queHay(e.lngLat),650)});['touchend','touchmove','dragstart'].forEach(ev=>map.on(ev,()=>clearTimeout(lp)));
+const aro=document.getElementById('aro'),per=document.getElementById('perilla'),agu=document.getElementById('aguja'),ginfo=document.getElementById('ginfo');
+const giroUI=()=>{agu.style.transform='rotate('+(-map.getBearing())+'deg)';ginfo.textContent='Inclinación '+Math.round(map.getPitch())+'°'};map.on('rotate',giroUI);map.on('pitch',giroUI);giroUI();
+let gx=null;aro.addEventListener('pointerdown',e=>{aro.setPointerCapture(e.pointerId);sinOrbita();parar();const r=aro.getBoundingClientRect();gx={cx:r.left+r.width/2,cy:r.top+r.height/2,b:map.getBearing(),p:map.getPitch(),x:e.clientX,y:e.clientY}});
+aro.addEventListener('pointermove',e=>{if(!gx)return;const dx=e.clientX-gx.x,dy=e.clientY-gx.y,m=Math.min(1,36/Math.max(1,Math.hypot(dx,dy)));per.style.transition='none';per.style.transform='translate('+dx*m+'px,'+dy*m+'px)';map.jumpTo({bearing:gx.b+dx*1.2,pitch:Math.max(0,Math.min(85,gx.p-dy*.9))})});
+const soltar=()=>{gx=null;per.style.transition='transform .2s';per.style.transform='none'};aro.addEventListener('pointerup',soltar);aro.addEventListener('pointercancel',soltar);
+aro.addEventListener('keydown',e=>{const k={ArrowLeft:[-10,0],ArrowRight:[10,0],ArrowUp:[0,8],ArrowDown:[0,-8]}[e.key];if(!k)return;e.preventDefault();map.easeTo({bearing:map.getBearing()+k[0],pitch:Math.max(0,Math.min(85,map.getPitch()+k[1])),duration:200})});
+document.getElementById('g-arriba').onclick=()=>{sinOrbita();map.easeTo({pitch:0,bearing:0,duration:900})};document.getElementById('g-3d').onclick=()=>{sinOrbita();map.easeTo({pitch:60,bearing:-20,duration:900})};
+['dragstart','zoomstart'].forEach(ev=>map.on(ev,e=>{if(e.originalEvent){sinOrbita();if(tourOn)parar()}}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){cerrarCajon();parar()}});
+</script>
+</body>
+</html>
