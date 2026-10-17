@@ -24,10 +24,10 @@ print('Contratación')
 c=rd('contra_app.html').replace('__DATOS__',rd('contra_out.json')).replace('__GEO__',rd('oriente_geo.json'))
 wr('contratacion/index.html',con_nav(c))
 print('Rigor Datos y Hallazgos graves')
-wr('datos/index.html',con_nav(rd('fx/datos.html').replace('__FX__',FX)))
+wr('datos/index.html',con_nav(rd('fx/datos.html').replace('__FX__',FX).replace('__FICHAS__',rd('fx/fichas.js'))))
 wr('cumplimiento/index.html',con_nav(rd('fx/cumplimiento.html')))
 print('Clústeres')
-import importlib.util as _u;_sp=_u.spec_from_file_location('clusters',os.path.join(SRC,'clusters.py'));_m=_u.module_from_spec(_sp);_sp.loader.exec_module(_m);_m.build(OUT)
+import importlib.util as _u;_sp=_u.spec_from_file_location('clusters',os.path.join(SRC,'clusters.py'));_m=_u.module_from_spec(_sp);_sp.loader.exec_module(_m);_m.build(OUT,FX,rd('fx/fichas.js'))
 for _r,_d,_f in os.walk(os.path.join(OUT,'clusters')):
     for _x in _f:
         if _x=='index.html':_p=os.path.join(_r,_x);wr(os.path.relpath(_p,OUT),con_nav(open(_p,encoding='utf8').read()))
