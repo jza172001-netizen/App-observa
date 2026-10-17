@@ -428,7 +428,7 @@ map.on('style.load',()=>{
 });
 map.setMaxBounds([[-75.78,6.08],[-75.42,6.42]]);map.setMinZoom(10);
 map.on('mousemove','z',e=>{if(TOQUE)return;const p=e.features[0].properties,l=L[act],br=barrioEn(e.lngLat);map.getCanvas().style.cursor='pointer';
- pop.setLngLat(e.lngLat).setHTML((br?'<b>Barrio '+br.n+'</b><br>':'')+(rural(p)?'':'Comuna '+p.k+' · ')+nom(p.nombre)+'<br>'+(l.barrio&&br?'Capturas por drogas: <b>'+fmt(br.cap)+'</b>':l.t+': <b>'+val(l,p[l.id])+'</b>')).addTo(map)});
+ pop.setLngLat(e.lngLat).setHTML(window.TIP?TIP(p,l,br):((br?'<b>Barrio '+br.n+'</b><br>':'')+(rural(p)?'':'Comuna '+p.k+' · ')+nom(p.nombre)+'<br>'+(l.barrio&&br?'Capturas por drogas: <b>'+fmt(br.cap)+'</b>':l.t+': <b>'+val(l,p[l.id])+'</b>'))).addTo(map)});
 map.on('mouseleave','z',()=>{map.getCanvas().style.cursor='';pop.remove()});
 map.on('click',e=>{const st=map.queryRenderedFeatures(e.point,{layers:['tme']});if(st.length){const p=st[0].properties;new maplibregl.Popup({offset:8}).setLngLat(e.lngLat).setHTML('<b>Estación '+p.n+'</b><br>'+p.t+' · '+p.l+fc('tm')).addTo(map);return}
  const z=map.queryRenderedFeatures(e.point,{layers:['z']});if(!z.length)return;const br=barrioEn(e.lngLat);lugar(z[0].properties.k);
@@ -616,7 +616,10 @@ const OFI=['adm','jud'];
 // Tipos de diferencia entre fuentes (no todas son contradicciones)
 const DIF={documental:['Contradicción','Dos fuentes dicen cosas distintas sobre lo mismo, el mismo lugar y el mismo periodo.'],brecha:['Brecha','Lo que la norma o la entidad promete o reconoce no se ve en lo que pasa.'],cobertura:['Diferencia de cobertura','Las fuentes cuentan cosas distintas (otro universo, otra unidad): no se contradicen, pero la distancia pide investigar.'],temporal:['Diferencia de tiempo','Las fuentes miden periodos distintos o el dato cambió con una revisión.'],subregistro:['Posible subregistro','El registro oficial capta solo lo que se denuncia o se reporta.'],vacio:['Vacío de información','No existe el dato que haría falta para concluir.']};
 // Origen: si la fuente dice "X (vía Y)", el dato es de X; Y solo lo repite
-const org=f=>(f.origen||String(f.quien).split('(vía')[0].split(' vía ')[0]).trim().toLowerCase();
+// Origen del dato: si la fuente dice "X (vía Y)", el dato es de X. Además se unifican nombres de la misma entidad
+// (p. ej. "DANE (vía El País)" y "DANE, boletín 2025" son una sola fuente). Una ficha puede fijarlo con f.origen.
+const CANON=[[/\bdane\b/,'dane'],[/ministerio de defensa|mindefensa/,'ministerio de defensa'],[/alcald[ií]a de medell[ií]n|^alcald[ií]a\b|secretar[ií]a de (salud|seguridad)[^,]*medell[ií]n|\bsisc\b/,'alcaldía de medellín'],[/polic[ií]a/,'policía nacional'],[/transparencia (por colombia|internacional)/,'transparencia por colombia'],[/\beafit\b/,'eafit'],[/silla vac[ií]a/,'la silla vacía'],[/presidencia|gobierno nacional/,'gobierno nacional'],[/unodc|ministerio de minas/,'minminas-unodc'],[/\bjep\b/,'jep'],[/contralor[ií]a general/,'contraloría general'],[/procuradur[ií]a/,'procuraduría'],[/defensor[ií]a/,'defensoría del pueblo'],[/fiscal[ií]a/,'fiscalía'],[/ministerio del interior|mininterior/,'ministerio del interior'],[/banco de la rep[uú]blica|banrep/,'banco de la república'],[/ministerio de hacienda|hacienda/,'ministerio de hacienda']];
+const org=f=>{if(f.origen)return String(f.origen).toLowerCase();const b=String(f.quien).split('(vía')[0].split(' vía ')[0].trim().toLowerCase();for(const [re,n] of CANON)if(re.test(b))return n;return b.split(/[,(]/)[0].trim()};
 const dn=x=>Array.isArray(x)?{t:x[0],d:x[1]}:{t:'documental',d:x};
 const dots=n=>'<span class="fx-dots" title="Solidez del tipo de fuente">'+[1,2,3,4,5].map(i=>'<i class="'+(i<=n?'on':'')+'"></i>').join('')+'</span>';
 function indep(c){const pl=c.fuentes.filter(f=>f.llave!=='parcial'&&f.apoya!==false),m=new Map();pl.forEach(f=>{const o=org(f);if(!m.has(o))m.set(o,f.tipo)});return m}
@@ -651,7 +654,7 @@ return {T,DIF,estado,ficha,leyenda,css,tabla,dots,indep}})();
 (function(){
 const u=k=>SRC[k]?SRC[k][1]:null;const P13=P('13'),P14=P('14'),P10=P('10');
 const PIL={'13':[
- {titulo:'La Escombrera: el Estado busca, pero a otra escala',llave:{lugar:'Comuna 13 · La Escombrera',periodo:'2002–2026',tema:'Desaparición forzada'},
+ {titulo:'La Escombrera: la búsqueda avanza y depende de recursos que hubo que ordenar',llave:{lugar:'Comuna 13 · La Escombrera',periodo:'2002–2026',tema:'Desaparición forzada'},
   fuentes:[{tipo:'jud',quien:'JEP',fecha:'may. 2026',dice:'7 cuerpos hallados desde diciembre de 2024; los 7 identificados y entregados a sus familias.',url:u('jep7')},
    {tipo:'jud',quien:'JEP',fecha:'sep. 2025',dice:'Entre 2001 y 2004 hubo 34 operaciones militares en la zona.',url:u('op34')},
    {tipo:'adm',quien:'Unidad de Búsqueda',fecha:'2025',dice:'502 personas reportadas como desaparecidas en la comuna.',url:u('ubpd')},
@@ -709,6 +712,7 @@ const PIL={'13':[
   pregunta:'¿Los puntos de venta siguen operando después de las capturas? Si sí, el efecto reemplazo queda probado.'}]};
 function pinta(){FX.css();document.getElementById('v-fuentes').innerHTML='<h2>Cruce de fuentes</h2><p class="sub">Así trabaja Observa Rigor: por cada comuna y cada tema juntamos fuentes oficiales y no oficiales con la misma llave, vemos dónde coinciden y dónde chocan, y escribimos la conclusión como un deber.</p>'+FX.leyenda()+
  [['13','San Javier · Comuna 13'],['14','El Poblado · Comuna 14'],['10','La Candelaria · Comuna 10']].map(([k,n])=>'<h3 class="h3n">'+n+'</h3>'+PIL[k].map(FX.ficha).join('')).join('')+'<p class="fte">Pilotos. Las otras 13 comunas se construyen con el mismo método. Rionegro queda como piloto del Oriente.</p>'}
+window.PIL_PINTA=pinta;
 const tb=document.querySelector('.tabs');const b=document.createElement('button');b.setAttribute('role','tab');b.setAttribute('aria-selected','false');b.dataset.t='fuentes';b.textContent='Cruce de fuentes';tb.insertBefore(b,tb.children[1]);
 const v=document.createElement('div');v.className='cuerpo';v.id='v-fuentes';v.hidden=true;document.getElementById('v-hallazgos').before(v);
 const TT=['explorar','fuentes','analisis','conclu','hallazgos','ranking','voces'];
@@ -716,6 +720,45 @@ document.querySelectorAll('.tabs button').forEach(x=>x.onclick=()=>{document.que
 // panel: en pantalla completa se esconden buscador y botones para que se vean las pestañas
 const _P=window.PANEL;window.PANEL=e=>{_P(e);document.body.classList.toggle('pfull',e==='full')};
 const st=document.createElement('style');st.textContent='@media (max-width:820px){body.pfull .top .busca,body.pfull .top .ctrls{display:none!important}.panel.full{height:calc(100% - 70px - env(safe-area-inset-top,0px))!important}}.intro{background:linear-gradient(rgba(11,8,20,.55),rgba(11,8,20,.85)),url(fotos/panorama13.jpg) center/cover}';document.head.appendChild(st);
+})();
+
+</script>
+<script>
+// ===== Datos al pasar el mouse por una comuna, y línea de memoria con enfoque de derechos humanos =====
+(function(){
+const UU=U.filter(p=>+p.k<50);
+const pos=(p,id,alto)=>{const v=UU.map(q=>q[id]).filter(x=>x!=null).sort((a,b)=>alto?b-a:a-b);const i=v.indexOf(p[id]);return i<0?null:i+1};
+window.TIP=function(p,l,br){const urb=!rural(p),rk=urb&&p[l.id]!=null?pos(p,l.id,true):null;
+ const fila=(t,v)=>v==null||v===''?'':'<div class="tp-r"><span>'+t+'</span><b>'+v+'</b></div>';
+ const nf=(typeof fichas==='function'&&urb)?fichas(p.k):[],nb=nf.filter(f=>f.alerta).length;
+ return '<div class="tp"><div class="tp-h">'+(urb?'Comuna '+p.k+' · ':'')+nom(p.nombre)+(br?'<small>Barrio '+br.n+'</small>':'')+'</div>'+
+  '<div class="tp-cap">'+l.t+': <b>'+(l.barrio&&br?fmt(br.cap)+' capturas por drogas':val(l,p[l.id]))+'</b>'+(rk?'<small>puesto '+rk+' de '+UU.length+' comunas</small>':'')+'</div>'+
+  fila('Pobreza',p.ipm!=null?fmt(p.ipm,1)+' %':null)+fila('Desempleo',p.desempleo!=null?fmt(p.desempleo,1)+' %':null)+fila('Capturas por drogas',p.cap376_x1000!=null?fmt(p.cap376_x1000,1)+' por mil':null)+fila('Extorsión denunciada',p.extorsion!=null&&p.poblacion?fmt(p.extorsion/p.poblacion*1e5,1)+' por 100 mil':null)+fila('Inversión por habitante',p.inv_pc!=null?peso(p.inv_pc):null)+
+  (urb?'<div class="tp-f">'+(nb?nb+' de '+nf.length+' normas con brecha':'Sin brecha evidente en las normas medidas')+(HITOS.some(h=>h.k===p.k)?' · '+HITOS.filter(h=>h.k===p.k).length+' hitos de memoria':'')+'<br>Tocá para ver el análisis</div>':'')+'</div>'};
+const HITOS=[
+ {f:'21 may. 2002',y:2002,k:'13',ll:[-75.6175,6.2560],t:'Operación Mariscal',d:'Operación militar y policial en la Comuna 13, con helicópteros y armamento pesado en zona urbana. Organizaciones de víctimas reportan nueve muertos, entre ellos tres menores de edad.',fu:[['Centro Nacional de Memoria Histórica','https://www.centrodememoriahistorica.gov.co/tag/cnmh/page/9/'],['Universidad de los Andes','https://cienciassociales.uniandes.edu.co/opca/articulo/espacios-de-memoria-el-caso-de-la-escombrera-en-medellin']]},
+ {f:'16–17 oct. 2002',y:2002,k:'13',ll:[-75.6215,6.2500],t:'Operación Orión',d:'La mayor operación militar urbana del país. Ese año la Comuna 13 concentró el 42 % del desplazamiento de Medellín (1.259 personas desplazadas por Orión, según el Grupo de Memoria Histórica). Después, el control pasó al Bloque Cacique Nutibara.',fu:[['Universidad de los Andes (cita a GMH, 2011)','https://cienciassociales.uniandes.edu.co/opca/articulo/espacios-de-memoria-el-caso-de-la-escombrera-en-medellin']]},
+ {f:'25 nov. 2003',y:2003,k:null,ll:null,t:'Desmovilización del Bloque Cacique Nutibara',d:'868 integrantes entregaron las armas en Medellín. Organizaciones como Amnistía Internacional cuestionaron si fue desmovilización o legalización del control territorial.',fu:[['El Colombiano','https://www.elcolombiano.com/historico/la_reinsercion_devolvio_150_ciudadanos-HHEC_22432'],['Peace Brigades International','https://peacebrigades.org/en/news/2002-apparent-peace']]},
+ {f:'2010',y:2010,k:'13',ll:[-75.6386,6.2588],t:'70 denuncias asociadas a La Escombrera',d:'A 2010 había 70 denuncias de desaparición asociadas a La Escombrera, según la Alcaldía y el PNUD; un excomandante paramilitar habló antes de su extradición de unas 100 fosas en la comuna.',fu:[['Universidad de los Andes (cita a Alcaldía y PNUD, 2011)','https://cienciassociales.uniandes.edu.co/opca/articulo/espacios-de-memoria-el-caso-de-la-escombrera-en-medellin']]},
+ {f:'25 dic. 2011',y:2011,k:'13',ll:[-75.6219,6.2484],t:'Escaleras eléctricas de la Comuna 13',d:'Obra de urbanismo social que convirtió el sector en uno de los más visitados por turistas. Es parte de la memoria del barrio, junto con el graffiti y el hip hop como alternativa al reclutamiento.',fu:[['Exoticca (blog de viajes)','https://www.exoticca.com/es/blog/comuna-13-medellin/']]},
+ {f:'2018',y:2018,k:'13',ll:[-75.6386,6.2588],t:'La JEP delimita La Escombrera como punto de interés forense',d:'Zona dentro de un predio privado de explotación de materiales.',fu:[['El Tiempo','https://www.eltiempo.com/justicia/jep-colombia/estos-son-los-contratos-y-operadores-privados-de-la-escombrera-lugar-donde-han-hallado-restos-humanos-3417287']]},
+ {f:'dic. 2024',y:2024,k:'13',ll:[-75.6386,6.2588],t:'Primeros hallazgos en La Escombrera',d:'La JEP encuentra los primeros restos humanos tras décadas de denuncias de las buscadoras.',fu:[['Noticias Caracol','https://www.noticiascaracol.com/colombia/jep-encontro-mas-restos-humanos-en-la-escombrera-en-medellin-es-una-fosa-comun-dice-petro-rg10']]},
+ {f:'may. 2026',y:2026,k:'13',ll:[-75.6386,6.2588],t:'La JEP entrega a la séptima víctima',d:'Los siete cuerpos hallados están identificados y entregados a sus familias.',fu:[['Noticias RCN','https://www.noticiasrcn.com/colombia/jep-entrega-cuerpo-de-la-septima-victima-hallada-en-la-escombrera-en-medellin-1022784']]}];
+window.HITOS=HITOS;
+const MK=[];function marcas(on){MK.forEach(m=>m.remove());MK.length=0;if(!on)return;const G={};HITOS.filter(h=>h.ll).forEach(h=>{const k=h.ll.join(',');(G[k]=G[k]||[]).push(h)});
+ Object.values(G).forEach(hs=>{const el=document.createElement('button');el.className='hito';el.textContent=hs.map(h=>h.y).filter((y,i,a)=>a.indexOf(y)===i).join(' · ');el.title=hs.map(h=>h.t).join(' / ');
+  el.onclick=e=>{e.stopPropagation();new maplibregl.Popup({offset:14,maxWidth:'300px'}).setLngLat(hs[0].ll).setHTML(hs.map(h=>'<b>'+h.f+' · '+h.t+'</b><br>'+h.d+'<br><small>'+h.fu.map(x=>'<a href="'+x[1]+'" target="_blank" rel="noopener">'+x[0]+'</a>').join(' · ')+'</small>').join('<hr style="opacity:.2">')).addTo(map)};
+  MK.push(new maplibregl.Marker({element:el,anchor:'top',offset:[0,22]}).setLngLat(hs[0].ll).addTo(map))})}
+function pinta(){document.getElementById('v-memoria').innerHTML='<h2>Memoria</h2><p class="sub">Hitos que explican el territorio, contados desde las víctimas y los derechos humanos. Cada uno con su fuente. Tocá un hito para verlo en el mapa.</p><label class="mm-t"><input type="checkbox" id="mm-on" checked> Mostrar los hitos en el mapa</label><ol class="tl">'+
+ HITOS.map((h,i)=>'<li><button onclick="MEM.ir('+i+')"><span class="tl-f">'+h.f+'</span><b>'+h.t+'</b><p>'+h.d+'</p><small>'+h.fu.map(x=>x[0]).join(' · ')+(h.fu.some(x=>/blog/.test(x[0]))?' (fuente débil: blog)':'')+'</small></button></li>').join('')+'</ol><p class="fte">La memoria no es neutral frente al dolor, pero sí frente a los datos: cada hito dice quién lo cuenta.</p>';
+ document.getElementById('mm-on').onchange=e=>marcas(e.target.checked)}
+window.MEM={ir:i=>{const h=HITOS[i];if(h.ll)map.flyTo({center:h.ll,zoom:15.2,pitch:60});else map.flyTo({center:[-75.5736,6.2442],zoom:12.2});if(CHICO())PANEL('min')}};
+const tb=document.querySelector('.tabs'),b=document.createElement('button');b.setAttribute('role','tab');b.setAttribute('aria-selected','false');b.dataset.t='memoria';b.textContent='Memoria';tb.insertBefore(b,tb.children[4]);
+const v=document.createElement('div');v.className='cuerpo';v.id='v-memoria';v.hidden=true;document.getElementById('v-hallazgos').before(v);
+const TT=['explorar','fuentes','analisis','conclu','memoria','hallazgos','ranking','voces'];
+document.querySelectorAll('.tabs button').forEach(x=>x.onclick=()=>{document.querySelectorAll('.tabs button').forEach(y=>y.setAttribute('aria-selected',y===x));TT.forEach(t=>{const e=document.getElementById('v-'+t);if(e)e.hidden=t!==x.dataset.t});const t=x.dataset.t;if(t==='analisis')analisis(sel);if(t==='conclu')CR.pinta();if(t==='fuentes'&&window.PIL_PINTA)PIL_PINTA();if(t==='memoria')pinta();if(CHICO())PANEL('full')});
+marcas(true);
+const st=document.createElement('style');st.textContent='.tp{min-width:210px;font-size:.78rem}.tp-h{font-weight:800;font-size:.9rem;margin-bottom:4px}.tp-h small{display:block;font-weight:400;opacity:.7}.tp-cap{padding:6px 8px;border-radius:8px;background:rgba(255,201,60,.12);margin:4px 0 6px}.tp-cap small{display:block;opacity:.7}.tp-r{display:flex;justify-content:space-between;gap:10px;padding:2px 0;border-bottom:1px solid rgba(127,127,127,.15)}.tp-f{margin-top:6px;font-size:.72rem;opacity:.8}.hito{font:700 .66rem Manrope,system-ui,sans-serif;padding:3px 7px;border-radius:99px;border:2px solid #fff;background:#FF4F8B;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.5)}.mm-t{display:flex;gap:8px;align-items:center;font-size:.82rem;margin:8px 0}.tl{list-style:none;padding:0;margin:10px 0;border-left:2px solid rgba(255,201,60,.4)}.tl li{margin:0 0 10px 12px}.tl button{all:unset;cursor:pointer;display:block;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.04)}.tl button:hover{background:rgba(255,255,255,.08)}.tl-f{font-size:.7rem;color:#FFC93C;font-weight:800}.tl b{display:block;margin:2px 0}.tl p{margin:2px 0;font-size:.8rem}.tl small{opacity:.6;font-size:.68rem}';document.head.appendChild(st);
 })();
 
 </script>

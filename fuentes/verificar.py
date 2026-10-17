@@ -16,4 +16,28 @@ for r,_,fs in os.walk(OUT):
             if f.endswith('.html'):
                 for h in re.findall(r'href="(/[a-z]+/)',s):
                     if not os.path.exists(os.path.join(OUT,h.strip('/'),'index.html')):print('✗ enlace roto',h,'en',p);mal+=1
-print('Todo en orden.' if not mal else f'{mal} problemas.');sys.exit(1 if mal else 0)
+print('Todo en orden.' if not mal else f'{mal} problemas.')
+
+# Revisión opcional de enlaces externos:  python verificar.py sitio --enlaces
+if '--enlaces' in sys.argv:
+    import urllib.request,concurrent.futures as cf
+    urls=set()
+    for r,_,fs in os.walk(OUT):
+        for f in fs:
+            if f.endswith('.html'):urls|={u if u.count('(')>=u.count(')') else u[:-1] for u in re.findall(r"https?://[^\s'\"<>]+",open(os.path.join(r,f),encoding='utf8').read())}
+    urls={u.rstrip('.,;') for u in urls if not re.search(r'(fonts\.|cdnjs|jsdelivr|ytimg|youtube-nocookie|wa\.me|api\.|tile|openfreemap|amazonaws|arcgisonline|google\.com/maps|earth\.google|\$\{|\'\+)',u)}
+    def ok(u):
+        for m in ('HEAD','GET'):
+            try:
+                r=urllib.request.urlopen(urllib.request.Request(u,method=m,headers={'User-Agent':'Mozilla/5.0 ObservaRigor'}),timeout=20);return u,r.status
+            except Exception as e:
+                c=getattr(e,'code',None)
+                if c in (403,429):return u,c
+                last=c or str(e)[:40]
+        return u,last
+    with cf.ThreadPoolExecutor(12) as ex:res=list(ex.map(ok,sorted(urls)))
+    rotos=[(u,c) for u,c in res if not (isinstance(c,int) and c<400) and c not in (403,429)]
+    print(f'Enlaces externos revisados: {len(res)} · con problema: {len(rotos)}')
+    for u,c in rotos:print('  ✗',c,u)
+
+sys.exit(1 if mal else 0)

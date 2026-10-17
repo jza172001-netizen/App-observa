@@ -2,7 +2,7 @@
 (function(){
 const u=k=>SRC[k]?SRC[k][1]:null;const P13=P('13'),P14=P('14'),P10=P('10');
 const PIL={'13':[
- {titulo:'La Escombrera: el Estado busca, pero a otra escala',llave:{lugar:'Comuna 13 · La Escombrera',periodo:'2002–2026',tema:'Desaparición forzada'},
+ {titulo:'La Escombrera: la búsqueda avanza y depende de recursos que hubo que ordenar',llave:{lugar:'Comuna 13 · La Escombrera',periodo:'2002–2026',tema:'Desaparición forzada'},
   fuentes:[{tipo:'jud',quien:'JEP',fecha:'may. 2026',dice:'7 cuerpos hallados desde diciembre de 2024; los 7 identificados y entregados a sus familias.',url:u('jep7')},
    {tipo:'jud',quien:'JEP',fecha:'sep. 2025',dice:'Entre 2001 y 2004 hubo 34 operaciones militares en la zona.',url:u('op34')},
    {tipo:'adm',quien:'Unidad de Búsqueda',fecha:'2025',dice:'502 personas reportadas como desaparecidas en la comuna.',url:u('ubpd')},
@@ -60,6 +60,7 @@ const PIL={'13':[
   pregunta:'¿Los puntos de venta siguen operando después de las capturas? Si sí, el efecto reemplazo queda probado.'}]};
 function pinta(){FX.css();document.getElementById('v-fuentes').innerHTML='<h2>Cruce de fuentes</h2><p class="sub">Así trabaja Observa Rigor: por cada comuna y cada tema juntamos fuentes oficiales y no oficiales con la misma llave, vemos dónde coinciden y dónde chocan, y escribimos la conclusión como un deber.</p>'+FX.leyenda()+
  [['13','San Javier · Comuna 13'],['14','El Poblado · Comuna 14'],['10','La Candelaria · Comuna 10']].map(([k,n])=>'<h3 class="h3n">'+n+'</h3>'+PIL[k].map(FX.ficha).join('')).join('')+'<p class="fte">Pilotos. Las otras 13 comunas se construyen con el mismo método. Rionegro queda como piloto del Oriente.</p>'}
+window.PIL_PINTA=pinta;
 const tb=document.querySelector('.tabs');const b=document.createElement('button');b.setAttribute('role','tab');b.setAttribute('aria-selected','false');b.dataset.t='fuentes';b.textContent='Cruce de fuentes';tb.insertBefore(b,tb.children[1]);
 const v=document.createElement('div');v.className='cuerpo';v.id='v-fuentes';v.hidden=true;document.getElementById('v-hallazgos').before(v);
 const TT=['explorar','fuentes','analisis','conclu','hallazgos','ranking','voces'];

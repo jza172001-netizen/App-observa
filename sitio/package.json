@@ -1,0 +1,7 @@
+{
+  "name": "observa-rigor",
+  "private": true,
+  "description": "Observa Rigor: funciones en vivo (noticias y SECOP II)",
+  "engines": { "node": ">=18" },
+  "dependencies": { "fast-xml-parser": "4.5.0" }
+}

@@ -427,7 +427,7 @@ map.on('style.load',()=>{
 });
 map.setMaxBounds([[-75.78,6.08],[-75.42,6.42]]);map.setMinZoom(10);
 map.on('mousemove','z',e=>{if(TOQUE)return;const p=e.features[0].properties,l=L[act],br=barrioEn(e.lngLat);map.getCanvas().style.cursor='pointer';
- pop.setLngLat(e.lngLat).setHTML((br?'<b>Barrio '+br.n+'</b><br>':'')+(rural(p)?'':'Comuna '+p.k+' · ')+nom(p.nombre)+'<br>'+(l.barrio&&br?'Capturas por drogas: <b>'+fmt(br.cap)+'</b>':l.t+': <b>'+val(l,p[l.id])+'</b>')).addTo(map)});
+ pop.setLngLat(e.lngLat).setHTML(window.TIP?TIP(p,l,br):((br?'<b>Barrio '+br.n+'</b><br>':'')+(rural(p)?'':'Comuna '+p.k+' · ')+nom(p.nombre)+'<br>'+(l.barrio&&br?'Capturas por drogas: <b>'+fmt(br.cap)+'</b>':l.t+': <b>'+val(l,p[l.id])+'</b>'))).addTo(map)});
 map.on('mouseleave','z',()=>{map.getCanvas().style.cursor='';pop.remove()});
 map.on('click',e=>{const st=map.queryRenderedFeatures(e.point,{layers:['tme']});if(st.length){const p=st[0].properties;new maplibregl.Popup({offset:8}).setLngLat(e.lngLat).setHTML('<b>Estación '+p.n+'</b><br>'+p.t+' · '+p.l+fc('tm')).addTo(map);return}
  const z=map.queryRenderedFeatures(e.point,{layers:['z']});if(!z.length)return;const br=barrioEn(e.lngLat);lugar(z[0].properties.k);

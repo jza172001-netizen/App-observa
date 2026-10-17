@@ -17,7 +17,7 @@ esc="{n:'La Escombrera',ll:[-75.6386,6.2588],k:'13',own:'ladera',r:1,s:['jep7','
 s=s.replace("{n:'Estación Villa',",esc+"{n:'Estación Villa',",1)
 s=s.replace('<body>','<body data-orn-nobottom>',1).replace('<div class="top">','<div class="top" data-orn-slot>',1)
 MOB='<style>@media (max-width:820px){.giro{transform:scale(.62);transform-origin:left bottom;left:8px!important}.panel:not(.min)~.giro{display:none!important}.panel:not(.min)~.tira{display:none!important}.fab button,.fab a{width:38px!important;height:38px!important}.top .orn-in{background:rgba(13,9,25,.75);backdrop-filter:blur(8px)}}</style>'
-js=[rd('analisis.js').replace('__TEND__',rd('tend.json')),rd('conclu.js'),FX+'\n'+rd('fx/pilotos.js')]
+js=[rd('analisis.js').replace('__TEND__',rd('tend.json')),rd('conclu.js'),FX+'\n'+rd('fx/pilotos.js'),rd('memoria.js')]
 k=s.rfind('</body>');s=s[:k]+''.join('<script>\n'+j+'\n</script>\n' for j in js)+MOB+'<script>'+NAV+'</script>'+s[k:]
 wr('medellin/index.html',s)
 print('Contratación')
